@@ -1,0 +1,1085 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>基于前馈神经网络实现姓氏分类</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><p></p><div class="toc"><h3>基于前馈神经网络实现姓氏分类</h3><ul><li><a href="#_2">一、实验介绍</a></li><ul><li><a href="#11__3">1.1 实验背景</a></li><li><a href="#12__22">1.2 实验原理</a></li></ul><li><a href="#_30">二、前馈神经网络实验过程</a></li><ul><li><a href="#21__31">2.1 数据集处理：</a></li><li><a href="#22___216">2.2  分类器构建</a></li><li><a href="#23__255">2.3 训练过程定义</a></li><li><a href="#24__471">2.4 模型性能测试</a></li><li><a href="#25__604">2.5 模型优化</a></li></ul><li><a href="#_668">三、卷积神经网络实验过程</a></li><ul><li><a href="#31_CNN_671">3.1 CNN常见超参数</a></li><ul><li><a href="#311_channels_672">3.1.1 通道（channels）</a></li><li><a href="#312_kernal_size_676">3.1.2 卷积核大小（kernal_size）</a></li><li><a href="#313_stride_678">3.1.3 步长（stride）</a></li><li><a href="#314__padding_680">3.1.4  零填充（padding）</a></li></ul><li><a href="#32__706">3.2 数据预处理</a></li><li><a href="#33_CNN_915">3.3 CNN模型构建</a></li><li><a href="#34_CNN_968">3.4 CNN迭代训练及结果测试</a></li><li><a href="#35_CNN_974">3.5 CNN常见操作解析</a></li><ul><li><a href="#351_Pooling_Operation_975">3.5.1 池化操作（Pooling Operation）</a></li><li><a href="#352_Batch_Normalization_979">3.5.2 批处理标准化（Batch Normalization）</a></li><li><a href="#353_NetworkinNetwork_Connections_1x1__988">3.5.3 Network-in-Network Connections (1x1 卷积)</a></li><li><a href="#354_Residual_ConnectionsResidual_Block_1013">3.5.4 残差连接/残差块（Residual Connections/Residual Block）</a></li><ul><li><a href="#_1016">基本概念</a></li><li><a href="#_1024">作用与优势</a></li><li><a href="#_1033">残差块结构</a></li></ul></ul></ul><li><a href="#_1045">四、实验总结与思考</a></li><ul><li><a href="#41__1047">4.1 模型设计方面</a></li><li><a href="#42__1050">4.2 模型选择</a></li><li><a href="#43__1054">4.3 实践经验</a></li><li><a href="#44__1057">4.4 未来优化方向</a></li></ul></ul></div><p></p>
+<h1><a id="_2"></a>一、实验介绍</h1>
+<h2><a id="11__3"></a>1.1 实验背景</h2>
+<p>在上次实验中，我们已了解到，感知机即为神经网络最简单的基本结构，但是感知机只能很好的解决线性问题，对于非线性（比如异或）问题就很难处理。但是当我们加深网络深度时，发现，低维空间内的线性不可分问题，映射到高维时，就有很大可能找到一个超平面，使得问题变成线性可分问题。<br>
+在这一实验中，我们将探索传统上称为前馈网络的神经网络模型，以及两种前馈神经网络:多层感知器和卷积神经网络。<br>
+<strong>多层感知机</strong>：多层感知器在结构上，将多个感知器分组在一个单层，并将多个层叠加在一起。<br>
+<img src="https://img-blog.csdnimg.cn/direct/7eb299d0f78148578dffad999a594a17.png" alt="一个单隐层的多层感知机，隐层有五个神经元"><br>
+<strong>卷积神经网络</strong>：卷积神经网络（Convolutional Neural Networks, CNN）是一种深度学习模型，特别适用于处理具有网格结构的数据，如图像和语音波形。它们的核心优势在于能够自动学习并提取输入数据的有意义特征，同时保持对平移、旋转和其他形式的变形有一定的不变性。</p>
+<p><em><strong>基本构成：</strong></em></p>
+<ol>
+<li>输入层：接收原始数据，如图像的像素矩阵。</li>
+<li>卷积层：使用一组称为卷积核或滤波器的小矩阵滑过输入数据，执行元素级乘法与求和操作，从而检测局部特征，如边缘、纹理等。每个滤波器产生一个特征图。</li>
+<li>激活函数层：如ReLU（Rectified Linear Unit），用于引入非线性，使网络能够学习更复杂的模式。</li>
+<li>池化层（Pooling）：通过降采样减少数据的空间尺寸，减少计算量，同时保持重要特征。常见的池化方式有最大池化和平均池化。</li>
+<li>全连接层（Fully Connected Layer）：位于网络末端，将学到的特征扁平化并进行分类或回归任务。<br>
+<em><strong>特点：</strong></em>
+<ol>
+<li>参数共享和稀疏连接：减少了网络参数的数量，提升了效率并降低了过拟合风险。</li>
+<li>平移不变性：能够识别图像中不同位置的相同特征。</li>
+<li>多尺度特征检测：通过使用多个大小不同的滤波器，可以捕获不同尺度的特征。<br>
+卷积计算过程示例：<br>
+<img src="https://img-blog.csdnimg.cn/direct/594b73bd6deb4b598dd1e0f82aa408e3.png" alt="图片像素进行卷积计算的示例过程"></li>
+</ol>
+</li>
+</ol>
+<h2><a id="12__22"></a>1.2 实验原理</h2>
+<p>与一般机器学习问题，大致相同，因为从本质上来看都是分类任务。<br>
+都是先从数据处理开始，然后进行模型搭建（分类器构建），然后训练模型，模型性能预测，一套流程。下面实验过程会对其进行详细阐述。<br>
+除此之外：</p>
+<ul>
+<li>多层感知器（MLP）：用于处理高维数据，尤其在分类任务中表现良好。</li>
+<li>卷积神经网络（CNN）：利用卷积层提取局部特征，适用于图像和序列数据。</li>
+<li>Batch Normalization：归一化输入，稳定训练过程。</li>
+<li>Dropout：防止过拟合，提高模型泛化能力。</li>
+</ul>
+<h1><a id="_30"></a>二、前馈神经网络实验过程</h1>
+<h2><a id="21__31"></a>2.1 数据集处理：</h2>
+<p>姓氏数据集，它收集了来自18个不同国家的10,000个姓氏，这些姓氏是作者从互联网上不同的姓名来源收集的。该数据集将在本课程实验的几个示例中重用，并具有一些使其有趣的属性。第一个性质是它是相当不平衡的。排名前三的课程占数据的60%以上:27%是英语，21%是俄语，14%是阿拉伯语。剩下的15个民族的频率也在下降——这也是语言特有的特性。第二个特点是，在国籍和姓氏正字法(拼写)之间有一种有效和直观的关系。有些拼写变体与原籍国联系非常紧密(比如“O ‘Neill”、“Antonopoulos”、“Nagasawa”或“Zhu”)。</p>
+<p>为了创建最终的数据集，我们从一个比课程补充材料中包含的版本处理更少的版本开始，并执行了几个数据集修改操作。第一个目的是减少这种不平衡——原始数据集中70%以上是俄文，这可能是由于抽样偏差或俄文姓氏的增多。为此，我们通过选择标记为俄语的姓氏的随机子集对这个过度代表的类进行子样本。接下来，我们根据国籍对数据集进行分组，并将数据集分为三个部分:70%到训练数据集，15%到验证数据集，最后15%到测试数据集，以便跨这些部分的类标签分布具有可比性。<br>
+<strong>对于前馈神经网络来说：</strong><br>
+定义一个SurnameDataset类，可以实现数据集处理的一些基本操作：</p>
+<pre><code class="prism language-python"><span class="token keyword">class</span> <span class="token class-name">SurnameDataset</span><span class="token punctuation">(</span>Dataset<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname_df<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        Args:
+            surname_df (pandas.DataFrame): 数据集
+            vectorizer (SurnameVectorizer): 从数据集中实例化的向量化器
+        """</span>
+        self<span class="token punctuation">.</span>surname_df <span class="token operator">=</span> surname_df
+        self<span class="token punctuation">.</span>_vectorizer <span class="token operator">=</span> vectorizer
+
+        <span class="token comment"># 拆分数据集为训练集、验证集和测试集</span>
+        self<span class="token punctuation">.</span>train_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split <span class="token operator">==</span> <span class="token string">'train'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>train_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>train_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>val_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split <span class="token operator">==</span> <span class="token string">'val'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>validation_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>val_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>test_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split <span class="token operator">==</span> <span class="token string">'test'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>test_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>test_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>_lookup_dict <span class="token operator">=</span> <span class="token punctuation">{</span>
+            <span class="token string">'train'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>train_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>train_size<span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">'val'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>val_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>validation_size<span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">'test'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>test_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>test_size<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+
+        self<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'train'</span><span class="token punctuation">)</span>
+        
+        <span class="token comment"># 计算类别权重</span>
+        class_counts <span class="token operator">=</span> surname_df<span class="token punctuation">.</span>nationality<span class="token punctuation">.</span>value_counts<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>to_dict<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">def</span> <span class="token function">sort_key</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">return</span> self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>item<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        sorted_counts <span class="token operator">=</span> <span class="token builtin">sorted</span><span class="token punctuation">(</span>class_counts<span class="token punctuation">.</span>items<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> key<span class="token operator">=</span>sort_key<span class="token punctuation">)</span>
+        frequencies <span class="token operator">=</span> <span class="token punctuation">[</span>count <span class="token keyword">for</span> _<span class="token punctuation">,</span> count <span class="token keyword">in</span> sorted_counts<span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>class_weights <span class="token operator">=</span> <span class="token number">1.0</span> <span class="token operator">/</span> torch<span class="token punctuation">.</span>tensor<span class="token punctuation">(</span>frequencies<span class="token punctuation">,</span> dtype<span class="token operator">=</span>torch<span class="token punctuation">.</span>float32<span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_dataset_and_make_vectorizer</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_csv<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""加载数据集并从头开始创建一个新的向量化器
+        
+        Args:
+            surname_csv (str): 数据集位置
+        Returns:
+            SurnameDataset 的一个实例
+        """</span>
+        surname_df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span>surname_csv<span class="token punctuation">)</span>
+        train_surname_df <span class="token operator">=</span> surname_df<span class="token punctuation">[</span>surname_df<span class="token punctuation">.</span>split <span class="token operator">==</span> <span class="token string">'train'</span><span class="token punctuation">]</span>
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_df<span class="token punctuation">,</span> SurnameVectorizer<span class="token punctuation">.</span>from_dataframe<span class="token punctuation">(</span>train_surname_df<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_dataset_and_load_vectorizer</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_csv<span class="token punctuation">,</span> vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""加载数据集和相应的向量化器。用于向量化器已缓存以供重用的情况
+        
+        Args:
+            surname_csv (str): 数据集位置
+            vectorizer_filepath (str): 已保存的向量化器的位置
+        Returns:
+            SurnameDataset 的一个实例
+        """</span>
+        surname_df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span>surname_csv<span class="token punctuation">)</span>
+        vectorizer <span class="token operator">=</span> cls<span class="token punctuation">.</span>load_vectorizer_only<span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_df<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@staticmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_vectorizer_only</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""从文件中加载向量化器的静态方法
+        
+        Args:
+            vectorizer_filepath (str): 序列化向量化器的位置
+        Returns:
+            SurnameVectorizer 的一个实例
+        """</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            <span class="token keyword">return</span> SurnameVectorizer<span class="token punctuation">.</span>from_serializable<span class="token punctuation">(</span>json<span class="token punctuation">.</span>load<span class="token punctuation">(</span>fp<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">save_vectorizer</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""使用json将向量化器保存到磁盘
+        
+        Args:
+            vectorizer_filepath (str): 保存向量化器的位置
+        """</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">,</span> <span class="token string">"w"</span><span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            json<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>to_serializable<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> fp<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">get_vectorizer</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">""" 返回向量化器 """</span>
+        <span class="token keyword">return</span> self<span class="token punctuation">.</span>_vectorizer
+
+    <span class="token keyword">def</span> <span class="token function">set_split</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> split<span class="token operator">=</span><span class="token string">"train"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">""" 使用数据框中的一列选择数据集的拆分 """</span>
+        self<span class="token punctuation">.</span>_target_split <span class="token operator">=</span> split
+        self<span class="token punctuation">.</span>_target_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>_target_size <span class="token operator">=</span> self<span class="token punctuation">.</span>_lookup_dict<span class="token punctuation">[</span>split<span class="token punctuation">]</span>
+
+    <span class="token keyword">def</span> <span class="token function">__len__</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> self<span class="token punctuation">.</span>_target_size
+
+    <span class="token keyword">def</span> <span class="token function">__getitem__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> index<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""PyTorch数据集的主要入口方法
+        
+        Args:
+            index (int): 数据点的索引
+        Returns:
+            一个包含数据点特征 (x_surname) 和标签 (y_nationality) 的字典
+        """</span>
+        row <span class="token operator">=</span> self<span class="token punctuation">.</span>_target_df<span class="token punctuation">.</span>iloc<span class="token punctuation">[</span>index<span class="token punctuation">]</span>
+
+        surname_vector <span class="token operator">=</span> self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>vectorize<span class="token punctuation">(</span>row<span class="token punctuation">.</span>surname<span class="token punctuation">)</span>
+        nationality_index <span class="token operator">=</span> self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>row<span class="token punctuation">.</span>nationality<span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> <span class="token punctuation">{</span><span class="token string">'x_surname'</span><span class="token punctuation">:</span> surname_vector<span class="token punctuation">,</span> <span class="token string">'y_nationality'</span><span class="token punctuation">:</span> nationality_index<span class="token punctuation">}</span>
+
+    <span class="token keyword">def</span> <span class="token function">get_num_batches</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> batch_size<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""给定批量大小，返回数据集中批量的数量
+        
+        Args:
+            batch_size (int)
+        Returns:
+            数据集中的批次数量
+        """</span>
+        <span class="token keyword">return</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span> <span class="token operator">//</span> batch_size
+
+<span class="token keyword">def</span> <span class="token function">generate_batches</span><span class="token punctuation">(</span>dataset<span class="token punctuation">,</span> batch_size<span class="token punctuation">,</span> shuffle<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> drop_last<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> device<span class="token operator">=</span><span class="token string">"cpu"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    一个生成器函数，包装了 PyTorch DataLoader。它会确保每个张量位于正确的设备位置。
+    """</span>
+    dataloader <span class="token operator">=</span> DataLoader<span class="token punctuation">(</span>dataset<span class="token operator">=</span>dataset<span class="token punctuation">,</span> batch_size<span class="token operator">=</span>batch_size<span class="token punctuation">,</span> shuffle<span class="token operator">=</span>shuffle<span class="token punctuation">,</span> drop_last<span class="token operator">=</span>drop_last<span class="token punctuation">)</span>
+
+    <span class="token keyword">for</span> data_dict <span class="token keyword">in</span> dataloader<span class="token punctuation">:</span>
+        out_data_dict <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+        <span class="token keyword">for</span> name<span class="token punctuation">,</span> tensor <span class="token keyword">in</span> data_dict<span class="token punctuation">.</span>items<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            out_data_dict<span class="token punctuation">[</span>name<span class="token punctuation">]</span> <span class="token operator">=</span> data_dict<span class="token punctuation">[</span>name<span class="token punctuation">]</span><span class="token punctuation">.</span>to<span class="token punctuation">(</span>device<span class="token punctuation">)</span>
+        <span class="token keyword">yield</span> out_data_dict
+
+</code></pre>
+<p>同时还要定义一个向量化器，用于将字符串转化为向量：</p>
+<pre><code class="prism language-python"><span class="token keyword">class</span> <span class="token class-name">SurnameVectorizer</span><span class="token punctuation">(</span><span class="token builtin">object</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">""" 向量器(Vectorizer)，它协调词汇表(Vocabularies)并将其投入使用。"""</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname_vocab<span class="token punctuation">,</span> nationality_vocab<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        self<span class="token punctuation">.</span>surname_vocab <span class="token operator">=</span> surname_vocab
+        self<span class="token punctuation">.</span>nationality_vocab <span class="token operator">=</span> nationality_vocab
+
+    <span class="token keyword">def</span> <span class="token function">vectorize</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""对给定的姓氏进行向量化
+
+        参数：
+        surname (str): 姓氏字符串
+        返回：
+        one_hot (np.ndarray): 一个折叠后的独热编码(one-hot encoding)向量
+        """</span>
+        vocab <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_vocab
+        one_hot <span class="token operator">=</span> np<span class="token punctuation">.</span>zeros<span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>vocab<span class="token punctuation">)</span><span class="token punctuation">,</span> dtype<span class="token operator">=</span>np<span class="token punctuation">.</span>float32<span class="token punctuation">)</span>
+        <span class="token keyword">for</span> token <span class="token keyword">in</span> surname<span class="token punctuation">:</span>
+            one_hot<span class="token punctuation">[</span>vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>token<span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">1</span>
+        <span class="token keyword">return</span> one_hot
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">from_dataframe</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_df<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""根据数据集DataFrame实例化向量化器(vectorizer)
+
+        参数：
+            surname_df (pandas.DataFrame): 姓氏数据集
+        返回：
+            SurnameVectorizer的一个实例
+        """</span>
+        surname_vocab <span class="token operator">=</span> Vocabulary<span class="token punctuation">(</span>unk_token<span class="token operator">=</span><span class="token string">"@"</span><span class="token punctuation">)</span>
+        nationality_vocab <span class="token operator">=</span> Vocabulary<span class="token punctuation">(</span>add_unk<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">for</span> index<span class="token punctuation">,</span> row <span class="token keyword">in</span> surname_df<span class="token punctuation">.</span>iterrows<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">for</span> letter <span class="token keyword">in</span> row<span class="token punctuation">.</span>surname<span class="token punctuation">:</span>
+                surname_vocab<span class="token punctuation">.</span>add_token<span class="token punctuation">(</span>letter<span class="token punctuation">)</span>
+            nationality_vocab<span class="token punctuation">.</span>add_token<span class="token punctuation">(</span>row<span class="token punctuation">.</span>nationality<span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_vocab<span class="token punctuation">,</span> nationality_vocab<span class="token punctuation">)</span>
+</code></pre>
+<p>除此之外还有文本处理类Vocabulary，但是与上次情感分析预测所使用的代码文件完全相同，不再赘述。多说一句，其实这个实验任务所用到的向量化器，跟上次实验也无太大区别，但有一点：字符串没有在空格上分割，这也是最关键的区别。</p>
+<h2><a id="22___216"></a>2.2  分类器构建</h2>
+<p>这次我们所使用的分类器，第一个线性层将输入向量映射到中间向量，并对该向量应用非线性。第二线性层将中间向量映射到预测向量。在最后一步中，可选地应用softmax操作，以确保输出和为1;这就是所谓的“概率”。</p>
+<pre><code class="prism language-python"><span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn <span class="token keyword">as</span> nn
+<span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn<span class="token punctuation">.</span>functional <span class="token keyword">as</span> F
+
+<span class="token keyword">class</span> <span class="token class-name">SurnameClassifier</span><span class="token punctuation">(</span>nn<span class="token punctuation">.</span>Module<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">""" 一个用于姓氏分类的两层多层感知器(MLP)"""</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">,</span> output_dim<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        参数：
+            input_dim (int): 输入向量的大小
+            hidden_dim (int): 第一层线性层(Liner layer)的输出大小
+            output_dim (int): 第二层线性层的输出大小
+        """</span>
+        <span class="token builtin">super</span><span class="token punctuation">(</span>SurnameClassifier<span class="token punctuation">,</span> self<span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>fc1 <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>fc2 <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>hidden_dim<span class="token punctuation">,</span> output_dim<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> x_in<span class="token punctuation">,</span> apply_softmax<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""分类器的前向传播(forward pass)
+        参数：
+            x_in (torch.Tensor): 输入数据张量。
+                x_in的形状应为(batch, input_dim)
+            apply_softmax (bool): 控制是否应用softmax激活函数的标志
+                如果与交叉熵损失(Cross Entropy losses)一起使用，应设为false
+        返回：
+            结果张量。其形状应为(batch, output_dim)
+        """</span>
+        intermediate_vector <span class="token operator">=</span> F<span class="token punctuation">.</span>relu<span class="token punctuation">(</span>self<span class="token punctuation">.</span>fc1<span class="token punctuation">(</span>x_in<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        prediction_vector <span class="token operator">=</span> self<span class="token punctuation">.</span>fc2<span class="token punctuation">(</span>intermediate_vector<span class="token punctuation">)</span>
+
+        <span class="token keyword">if</span> apply_softmax<span class="token punctuation">:</span>
+            prediction_vector <span class="token operator">=</span> F<span class="token punctuation">.</span>softmax<span class="token punctuation">(</span>prediction_vector<span class="token punctuation">,</span> dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> prediction_vector
+</code></pre>
+<h2><a id="23__255"></a>2.3 训练过程定义</h2>
+<p>首先需要将用于训练的数据集的路径定义完全：</p>
+<pre><code class="prism language-python"><span class="token keyword">from</span> argparse <span class="token keyword">import</span> Namespace
+args <span class="token operator">=</span> Namespace<span class="token punctuation">(</span>
+    <span class="token comment"># 数据集路径</span>
+    surname_csv<span class="token operator">=</span><span class="token string">"data/surnames/surnames_with_splits.csv"</span><span class="token punctuation">,</span>
+    vectorizer_file<span class="token operator">=</span><span class="token string">"vectorizer.json"</span><span class="token punctuation">,</span>
+    model_state_file<span class="token operator">=</span><span class="token string">"model.pth"</span><span class="token punctuation">,</span>
+    save_dir<span class="token operator">=</span><span class="token string">"model_storage/ch4/surname_mlp"</span><span class="token punctuation">,</span>
+    <span class="token comment"># 模型超参数(hyper parameters)</span>
+    hidden_dim<span class="token operator">=</span><span class="token number">300</span><span class="token punctuation">,</span>
+    <span class="token comment"># 训练超参数</span>
+    seed<span class="token operator">=</span><span class="token number">1337</span><span class="token punctuation">,</span>
+    num_epochs<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">,</span>
+    early_stopping_criteria<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span>
+    learning_rate<span class="token operator">=</span><span class="token number">0.001</span><span class="token punctuation">,</span>
+    batch_size<span class="token operator">=</span><span class="token number">64</span><span class="token punctuation">,</span>
+
+    cuda<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span>
+    reload_from_files<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span>
+    expand_filepaths_to_save_dir<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+    
+<span class="token punctuation">)</span>
+</code></pre>
+<p>然后就要定义训练循环的具体流程：</p>
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">make_train_state</span><span class="token punctuation">(</span>args<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span><span class="token string">'stop_early'</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+            <span class="token string">'early_stopping_step'</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+            <span class="token string">'early_stopping_best_val'</span><span class="token punctuation">:</span> <span class="token number">1e8</span><span class="token punctuation">,</span>
+            <span class="token string">'learning_rate'</span><span class="token punctuation">:</span> args<span class="token punctuation">.</span>learning_rate<span class="token punctuation">,</span>
+            <span class="token string">'epoch_index'</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+            <span class="token string">'train_loss'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token string">'train_acc'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token string">'val_loss'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token string">'val_acc'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token string">'test_loss'</span><span class="token punctuation">:</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span>
+            <span class="token string">'test_acc'</span><span class="token punctuation">:</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span>
+            <span class="token string">'model_filename'</span><span class="token punctuation">:</span> args<span class="token punctuation">.</span>model_state_file<span class="token punctuation">}</span>
+
+<span class="token keyword">def</span> <span class="token function">update_train_state</span><span class="token punctuation">(</span>args<span class="token punctuation">,</span> model<span class="token punctuation">,</span> train_state<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""处理训练状态更新。
+
+    组件：
+    - 早停（Early Stopping）：防止过拟合。
+    - 模型检查点（Model Checkpoint）：如果模型性能提升，则保存模型。
+
+    参数：
+    - args：主要的程序参数。
+    - model：待训练的模型。
+    - train_state：一个字典，用于存储训练状态信息。
+
+    返回：
+    更新后的训练状态（train_state）。这可能包括了如当前迭代轮数、最好模型的评估指标、是否已触发早停等信息。
+    """</span>
+
+    <span class="token comment"># 至少保存一个模型</span>
+    <span class="token keyword">if</span> train_state<span class="token punctuation">[</span><span class="token string">'epoch_index'</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">:</span>
+        torch<span class="token punctuation">.</span>save<span class="token punctuation">(</span>model<span class="token punctuation">.</span>state_dict<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> train_state<span class="token punctuation">[</span><span class="token string">'model_filename'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        train_state<span class="token punctuation">[</span><span class="token string">'stop_early'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">False</span>
+
+    <span class="token comment"># 性能提升则保存模型</span>
+    <span class="token keyword">elif</span> train_state<span class="token punctuation">[</span><span class="token string">'epoch_index'</span><span class="token punctuation">]</span> <span class="token operator">&gt;=</span> <span class="token number">1</span><span class="token punctuation">:</span>
+        loss_tm1<span class="token punctuation">,</span> loss_t <span class="token operator">=</span> train_state<span class="token punctuation">[</span><span class="token string">'val_loss'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">:</span><span class="token punctuation">]</span>
+
+        <span class="token comment"># 损失值变差</span>
+        <span class="token keyword">if</span> loss_t <span class="token operator">&gt;=</span> train_state<span class="token punctuation">[</span><span class="token string">'early_stopping_best_val'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+            <span class="token comment"># 更新步骤</span>
+            train_state<span class="token punctuation">[</span><span class="token string">'early_stopping_step'</span><span class="token punctuation">]</span> <span class="token operator">+=</span> <span class="token number">1</span>
+        <span class="token comment"># 损失值降低</span>
+        <span class="token keyword">else</span><span class="token punctuation">:</span>
+            <span class="token comment"># 保存最佳模型</span>
+            <span class="token keyword">if</span> loss_t <span class="token operator">&lt;</span> train_state<span class="token punctuation">[</span><span class="token string">'early_stopping_best_val'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+                torch<span class="token punctuation">.</span>save<span class="token punctuation">(</span>model<span class="token punctuation">.</span>state_dict<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> train_state<span class="token punctuation">[</span><span class="token string">'model_filename'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># Reset early stopping step</span>
+            train_state<span class="token punctuation">[</span><span class="token string">'early_stopping_step'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span>
+
+        <span class="token comment"># Stop early ?</span>
+        train_state<span class="token punctuation">[</span><span class="token string">'stop_early'</span><span class="token punctuation">]</span> <span class="token operator">=</span> \
+            train_state<span class="token punctuation">[</span><span class="token string">'early_stopping_step'</span><span class="token punctuation">]</span> <span class="token operator">&gt;=</span> args<span class="token punctuation">.</span>early_stopping_criteria
+
+    <span class="token keyword">return</span> train_state
+
+<span class="token keyword">def</span> <span class="token function">compute_accuracy</span><span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> y_target<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    _<span class="token punctuation">,</span> y_pred_indices <span class="token operator">=</span> y_pred<span class="token punctuation">.</span><span class="token builtin">max</span><span class="token punctuation">(</span>dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+    n_correct <span class="token operator">=</span> torch<span class="token punctuation">.</span>eq<span class="token punctuation">(</span>y_pred_indices<span class="token punctuation">,</span> y_target<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> n_correct <span class="token operator">/</span> <span class="token builtin">len</span><span class="token punctuation">(</span>y_pred_indices<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">100</span>
+
+classifier <span class="token operator">=</span> classifier<span class="token punctuation">.</span>to<span class="token punctuation">(</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+dataset<span class="token punctuation">.</span>class_weights <span class="token operator">=</span> dataset<span class="token punctuation">.</span>class_weights<span class="token punctuation">.</span>to<span class="token punctuation">(</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+
+    
+loss_func <span class="token operator">=</span> nn<span class="token punctuation">.</span>CrossEntropyLoss<span class="token punctuation">(</span>dataset<span class="token punctuation">.</span>class_weights<span class="token punctuation">)</span>
+optimizer <span class="token operator">=</span> optim<span class="token punctuation">.</span>Adam<span class="token punctuation">(</span>classifier<span class="token punctuation">.</span>parameters<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> lr<span class="token operator">=</span>args<span class="token punctuation">.</span>learning_rate<span class="token punctuation">)</span>
+scheduler <span class="token operator">=</span> optim<span class="token punctuation">.</span>lr_scheduler<span class="token punctuation">.</span>ReduceLROnPlateau<span class="token punctuation">(</span>optimizer<span class="token operator">=</span>optimizer<span class="token punctuation">,</span>
+                                                 mode<span class="token operator">=</span><span class="token string">'min'</span><span class="token punctuation">,</span> factor<span class="token operator">=</span><span class="token number">0.5</span><span class="token punctuation">,</span>
+                                                 patience<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+
+train_state <span class="token operator">=</span> make_train_state<span class="token punctuation">(</span>args<span class="token punctuation">)</span>
+
+epoch_bar <span class="token operator">=</span> tqdm_notebook<span class="token punctuation">(</span>desc<span class="token operator">=</span><span class="token string">'training routine'</span><span class="token punctuation">,</span> 
+                          total<span class="token operator">=</span>args<span class="token punctuation">.</span>num_epochs<span class="token punctuation">,</span>
+                          position<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+
+dataset<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'train'</span><span class="token punctuation">)</span>
+train_bar <span class="token operator">=</span> tqdm_notebook<span class="token punctuation">(</span>desc<span class="token operator">=</span><span class="token string">'split=train'</span><span class="token punctuation">,</span>
+                          total<span class="token operator">=</span>dataset<span class="token punctuation">.</span>get_num_batches<span class="token punctuation">(</span>args<span class="token punctuation">.</span>batch_size<span class="token punctuation">)</span><span class="token punctuation">,</span> 
+                          position<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> 
+                          leave<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+dataset<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'val'</span><span class="token punctuation">)</span>
+val_bar <span class="token operator">=</span> tqdm_notebook<span class="token punctuation">(</span>desc<span class="token operator">=</span><span class="token string">'split=val'</span><span class="token punctuation">,</span>
+                        total<span class="token operator">=</span>dataset<span class="token punctuation">.</span>get_num_batches<span class="token punctuation">(</span>args<span class="token punctuation">.</span>batch_size<span class="token punctuation">)</span><span class="token punctuation">,</span> 
+                        position<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> 
+                        leave<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+<span class="token keyword">try</span><span class="token punctuation">:</span>
+    <span class="token keyword">for</span> epoch_index <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>args<span class="token punctuation">.</span>num_epochs<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        train_state<span class="token punctuation">[</span><span class="token string">'epoch_index'</span><span class="token punctuation">]</span> <span class="token operator">=</span> epoch_index
+
+        <span class="token comment"># 迭代训练数据集</span>
+
+        <span class="token comment"># 在开始遍历训练数据集并进行模型训练之前，需要做一些初始设置，</span>
+        <span class="token comment"># 包括创建批次生成器（batch generator）、初始化损失(loss)和准确率(acc)的累计值为0，以及确保模型处于训练模式。</span>
+
+        dataset<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'train'</span><span class="token punctuation">)</span>
+        batch_generator <span class="token operator">=</span> generate_batches<span class="token punctuation">(</span>dataset<span class="token punctuation">,</span> 
+                                           batch_size<span class="token operator">=</span>args<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> 
+                                           device<span class="token operator">=</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+        running_loss <span class="token operator">=</span> <span class="token number">0.0</span>
+        running_acc <span class="token operator">=</span> <span class="token number">0.0</span>
+        classifier<span class="token punctuation">.</span>train<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">for</span> batch_index<span class="token punctuation">,</span> batch_dict <span class="token keyword">in</span> <span class="token builtin">enumerate</span><span class="token punctuation">(</span>batch_generator<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token comment"># 训练过程分五步</span>
+
+            <span class="token comment"># --------------------------------------</span>
+            <span class="token comment"># step 1. 梯度清零</span>
+            optimizer<span class="token punctuation">.</span>zero_grad<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># step 2. 计算输出</span>
+            y_pred <span class="token operator">=</span> classifier<span class="token punctuation">(</span>batch_dict<span class="token punctuation">[</span><span class="token string">'x_surname'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># step 3. 计算损失</span>
+            loss <span class="token operator">=</span> loss_func<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+            loss_t <span class="token operator">=</span> loss<span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>
+            running_loss <span class="token operator">+=</span> <span class="token punctuation">(</span>loss_t <span class="token operator">-</span> running_loss<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># step 4. 使用损失去计算梯度</span>
+            loss<span class="token punctuation">.</span>backward<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># step 5. 使用优化去去更新参数</span>
+            optimizer<span class="token punctuation">.</span>step<span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token comment"># -----------------------------------------</span>
+            <span class="token comment"># 计算精确度</span>
+            acc_t <span class="token operator">=</span> compute_accuracy<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+            running_acc <span class="token operator">+=</span> <span class="token punctuation">(</span>acc_t <span class="token operator">-</span> running_acc<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># update bar</span>
+            train_bar<span class="token punctuation">.</span>set_postfix<span class="token punctuation">(</span>loss<span class="token operator">=</span>running_loss<span class="token punctuation">,</span> acc<span class="token operator">=</span>running_acc<span class="token punctuation">,</span> 
+                            epoch<span class="token operator">=</span>epoch_index<span class="token punctuation">)</span>
+            train_bar<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        train_state<span class="token punctuation">[</span><span class="token string">'train_loss'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>running_loss<span class="token punctuation">)</span>
+        train_state<span class="token punctuation">[</span><span class="token string">'train_acc'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>running_acc<span class="token punctuation">)</span>
+
+        <span class="token comment"># 验证集迭代</span>
+
+        <span class="token comment"># setup: batch generator, set loss and acc to 0; set eval mode on</span>
+        dataset<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'val'</span><span class="token punctuation">)</span>
+        batch_generator <span class="token operator">=</span> generate_batches<span class="token punctuation">(</span>dataset<span class="token punctuation">,</span> 
+                                           batch_size<span class="token operator">=</span>args<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> 
+                                           device<span class="token operator">=</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+        running_loss <span class="token operator">=</span> <span class="token number">0.</span>
+        running_acc <span class="token operator">=</span> <span class="token number">0.</span>
+        classifier<span class="token punctuation">.</span><span class="token builtin">eval</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">for</span> batch_index<span class="token punctuation">,</span> batch_dict <span class="token keyword">in</span> <span class="token builtin">enumerate</span><span class="token punctuation">(</span>batch_generator<span class="token punctuation">)</span><span class="token punctuation">:</span>
+
+            <span class="token comment"># 计算输出</span>
+            y_pred <span class="token operator">=</span>  classifier<span class="token punctuation">(</span>batch_dict<span class="token punctuation">[</span><span class="token string">'x_surname'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># step 3. 计算损失</span>
+            loss <span class="token operator">=</span> loss_func<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+            loss_t <span class="token operator">=</span> loss<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">"cpu"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>
+            running_loss <span class="token operator">+=</span> <span class="token punctuation">(</span>loss_t <span class="token operator">-</span> running_loss<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+
+            <span class="token comment"># 计算精确度</span>
+            acc_t <span class="token operator">=</span> compute_accuracy<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+            running_acc <span class="token operator">+=</span> <span class="token punctuation">(</span>acc_t <span class="token operator">-</span> running_acc<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+            val_bar<span class="token punctuation">.</span>set_postfix<span class="token punctuation">(</span>loss<span class="token operator">=</span>running_loss<span class="token punctuation">,</span> acc<span class="token operator">=</span>running_acc<span class="token punctuation">,</span> 
+                            epoch<span class="token operator">=</span>epoch_index<span class="token punctuation">)</span>
+            val_bar<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        train_state<span class="token punctuation">[</span><span class="token string">'val_loss'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>running_loss<span class="token punctuation">)</span>
+        train_state<span class="token punctuation">[</span><span class="token string">'val_acc'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>running_acc<span class="token punctuation">)</span>
+
+        train_state <span class="token operator">=</span> update_train_state<span class="token punctuation">(</span>args<span class="token operator">=</span>args<span class="token punctuation">,</span> model<span class="token operator">=</span>classifier<span class="token punctuation">,</span>
+                                         train_state<span class="token operator">=</span>train_state<span class="token punctuation">)</span>
+
+        scheduler<span class="token punctuation">.</span>step<span class="token punctuation">(</span>train_state<span class="token punctuation">[</span><span class="token string">'val_loss'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">if</span> train_state<span class="token punctuation">[</span><span class="token string">'stop_early'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+            <span class="token keyword">break</span>
+
+        train_bar<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span>
+        val_bar<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span>
+        epoch_bar<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">except</span> KeyboardInterrupt<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Exiting loop"</span><span class="token punctuation">)</span>
+
+</code></pre>
+<h2><a id="24__471"></a>2.4 模型性能测试</h2>
+<p>得到测试集的损失和精度：</p>
+<pre><code class="prism language-python"><span class="token comment"># 计算损失与精度</span>
+
+classifier<span class="token punctuation">.</span>load_state_dict<span class="token punctuation">(</span>torch<span class="token punctuation">.</span>load<span class="token punctuation">(</span>train_state<span class="token punctuation">[</span><span class="token string">'model_filename'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+classifier <span class="token operator">=</span> classifier<span class="token punctuation">.</span>to<span class="token punctuation">(</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+dataset<span class="token punctuation">.</span>class_weights <span class="token operator">=</span> dataset<span class="token punctuation">.</span>class_weights<span class="token punctuation">.</span>to<span class="token punctuation">(</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+loss_func <span class="token operator">=</span> nn<span class="token punctuation">.</span>CrossEntropyLoss<span class="token punctuation">(</span>dataset<span class="token punctuation">.</span>class_weights<span class="token punctuation">)</span>
+
+dataset<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'test'</span><span class="token punctuation">)</span>
+batch_generator <span class="token operator">=</span> generate_batches<span class="token punctuation">(</span>dataset<span class="token punctuation">,</span> 
+                                   batch_size<span class="token operator">=</span>args<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> 
+                                   device<span class="token operator">=</span>args<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+running_loss <span class="token operator">=</span> <span class="token number">0.</span>
+running_acc <span class="token operator">=</span> <span class="token number">0.</span>
+classifier<span class="token punctuation">.</span><span class="token builtin">eval</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> batch_index<span class="token punctuation">,</span> batch_dict <span class="token keyword">in</span> <span class="token builtin">enumerate</span><span class="token punctuation">(</span>batch_generator<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># compute the output</span>
+    y_pred <span class="token operator">=</span>  classifier<span class="token punctuation">(</span>batch_dict<span class="token punctuation">[</span><span class="token string">'x_surname'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># compute the loss</span>
+    loss <span class="token operator">=</span> loss_func<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    loss_t <span class="token operator">=</span> loss<span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    running_loss <span class="token operator">+=</span> <span class="token punctuation">(</span>loss_t <span class="token operator">-</span> running_loss<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># compute the accuracy</span>
+    acc_t <span class="token operator">=</span> compute_accuracy<span class="token punctuation">(</span>y_pred<span class="token punctuation">,</span> batch_dict<span class="token punctuation">[</span><span class="token string">'y_nationality'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    running_acc <span class="token operator">+=</span> <span class="token punctuation">(</span>acc_t <span class="token operator">-</span> running_acc<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span>batch_index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+
+train_state<span class="token punctuation">[</span><span class="token string">'test_loss'</span><span class="token punctuation">]</span> <span class="token operator">=</span> running_loss
+train_state<span class="token punctuation">[</span><span class="token string">'test_acc'</span><span class="token punctuation">]</span> <span class="token operator">=</span> running_acc
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Test loss: {};"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>train_state<span class="token punctuation">[</span><span class="token string">'test_loss'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Test Accuracy: {}"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>train_state<span class="token punctuation">[</span><span class="token string">'test_acc'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+</code></pre>
+<p>结果为：<br>
+<img src="https://img-blog.csdnimg.cn/direct/9860d35cf6a34e1c8b769e4d2266c828.png" alt="结果"><br>
+这里效果较差，主要是为了减少训练时间而将epoch只设置为20。<br>
+接下来进行示例测试:</p>
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">predict_nationality</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> classifier<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 将姓名转换为向量表示</span>
+    vectorized_name <span class="token operator">=</span> vectorizer<span class="token punctuation">.</span>vectorize<span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+    
+    <span class="token comment"># 将姓名向量转换为PyTorch张量，并调整其形状以便输入模型</span>
+    vectorized_name <span class="token operator">=</span> torch<span class="token punctuation">.</span>tensor<span class="token punctuation">(</span>vectorized_name<span class="token punctuation">)</span><span class="token punctuation">.</span>view<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 使用分类器对姓名向量进行预测，并应用softmax函数以获得概率分布</span>
+    result <span class="token operator">=</span> classifier<span class="token punctuation">(</span>vectorized_name<span class="token punctuation">,</span> apply_softmax<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 找出概率最大的预测类别及其对应的索引</span>
+    probability_values<span class="token punctuation">,</span> indices <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token builtin">max</span><span class="token punctuation">(</span>dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+    index <span class="token operator">=</span> indices<span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment"># 获取最大值索引的标量形式</span>
+    
+    <span class="token comment"># 根据索引查找并返回预测的国籍</span>
+    predicted_nationality <span class="token operator">=</span> vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_index<span class="token punctuation">(</span>index<span class="token punctuation">)</span>
+    
+    <span class="token comment"># 获取最高预测概率的标量值</span>
+    probability_value <span class="token operator">=</span> probability_values<span class="token punctuation">.</span>item<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 返回预测的国籍和其对应的概率</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span><span class="token string">'nationality'</span><span class="token punctuation">:</span> predicted_nationality<span class="token punctuation">,</span> <span class="token string">'probability'</span><span class="token punctuation">:</span> probability_value<span class="token punctuation">}</span>
+
+
+<span class="token comment">## 输入样例</span>
+new_surname <span class="token operator">=</span> <span class="token builtin">input</span><span class="token punctuation">(</span><span class="token string">"Enter a surname to classify: "</span><span class="token punctuation">)</span>
+classifier <span class="token operator">=</span> classifier<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">"cpu"</span><span class="token punctuation">)</span>
+prediction <span class="token operator">=</span> predict_nationality<span class="token punctuation">(</span>new_surname<span class="token punctuation">,</span> classifier<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"{} -&gt; {} (p={:0.2f})"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>new_surname<span class="token punctuation">,</span>
+                                    prediction<span class="token punctuation">[</span><span class="token string">'nationality'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                                    prediction<span class="token punctuation">[</span><span class="token string">'probability'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<p>测试结果：<br>
+<img src="https://img-blog.csdnimg.cn/direct/57762f63681f48cbabc47c424645cd71.png" alt="测试结果"><br>
+不仅要看最好的预测，还要看更多的预测。NLP中的标准实践是采用k-best预测并使用另一个模型对它们重新排序：</p>
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">predict_topk_nationality</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> classifier<span class="token punctuation">,</span> vectorizer<span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 将姓名通过vectorizer转换为向量形式</span>
+    vectorized_name <span class="token operator">=</span> vectorizer<span class="token punctuation">.</span>vectorize<span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+    
+    <span class="token comment"># 将姓名向量转换为PyTorch张量，并调整其形状适应模型输入要求</span>
+    vectorized_name <span class="token operator">=</span> torch<span class="token punctuation">.</span>tensor<span class="token punctuation">(</span>vectorized_name<span class="token punctuation">)</span><span class="token punctuation">.</span>view<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 使用分类器模型对姓名向量进行预测，并应用softmax得到概率分布</span>
+    prediction_vector <span class="token operator">=</span> classifier<span class="token punctuation">(</span>vectorized_name<span class="token punctuation">,</span> apply_softmax<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 从预测概率分布中选取前k个最高概率的索引及其对应的概率值</span>
+    probability_values<span class="token punctuation">,</span> indices <span class="token operator">=</span> torch<span class="token punctuation">.</span>topk<span class="token punctuation">(</span>prediction_vector<span class="token punctuation">,</span> k<span class="token operator">=</span>k<span class="token punctuation">)</span>
+    
+    <span class="token comment"># 将torch.Tensor对象转换为numpy数组，并提取数据</span>
+    <span class="token comment"># probability_values shape变为(1, k) -&gt; (k,)</span>
+    probability_values <span class="token operator">=</span> probability_values<span class="token punctuation">.</span>detach<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>numpy<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+    indices <span class="token operator">=</span> indices<span class="token punctuation">.</span>detach<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>numpy<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+    
+    <span class="token comment"># 初始化结果列表，用于存储前k个预测结果</span>
+    results <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    
+    <span class="token comment"># 遍历前k个概率值及其对应的索引</span>
+    <span class="token keyword">for</span> prob_value<span class="token punctuation">,</span> index <span class="token keyword">in</span> <span class="token builtin">zip</span><span class="token punctuation">(</span>probability_values<span class="token punctuation">,</span> indices<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># 根据索引查找对应的国籍名称</span>
+        nationality <span class="token operator">=</span> vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_index<span class="token punctuation">(</span>index<span class="token punctuation">)</span>
+        
+        <span class="token comment"># 将国籍与相应的概率值组成字典，添加至结果列表</span>
+        results<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token string">'nationality'</span><span class="token punctuation">:</span> nationality<span class="token punctuation">,</span> <span class="token string">'probability'</span><span class="token punctuation">:</span> prob_value<span class="token punctuation">}</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 返回包含前k个最有可能的国籍及其概率的列表</span>
+    <span class="token keyword">return</span> results
+<span class="token comment">## 输入样例，预测结果</span>
+new_surname <span class="token operator">=</span> <span class="token builtin">input</span><span class="token punctuation">(</span><span class="token string">"Enter a surname to classify: "</span><span class="token punctuation">)</span>
+classifier <span class="token operator">=</span> classifier<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">"cpu"</span><span class="token punctuation">)</span>
+
+k <span class="token operator">=</span> <span class="token builtin">int</span><span class="token punctuation">(</span><span class="token builtin">input</span><span class="token punctuation">(</span><span class="token string">"How many of the top predictions to see? "</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">if</span> k <span class="token operator">&gt;</span> <span class="token builtin">len</span><span class="token punctuation">(</span>vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Sorry! That's more than the # of nationalities we have.. defaulting you to max size :)"</span><span class="token punctuation">)</span>
+    k <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">)</span>
+    
+predictions <span class="token operator">=</span> predict_topk_nationality<span class="token punctuation">(</span>new_surname<span class="token punctuation">,</span> classifier<span class="token punctuation">,</span> vectorizer<span class="token punctuation">,</span> k<span class="token operator">=</span>k<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Top {} predictions:"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"==================="</span><span class="token punctuation">)</span>
+<span class="token keyword">for</span> prediction <span class="token keyword">in</span> predictions<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"{} -&gt; {} (p={:0.2f})"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>new_surname<span class="token punctuation">,</span>
+                                        prediction<span class="token punctuation">[</span><span class="token string">'nationality'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                                        prediction<span class="token punctuation">[</span><span class="token string">'probability'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<p>得到测试结果：<br>
+<img src="https://img-blog.csdnimg.cn/direct/b08c78b881da452a96d2e852d8ffcf8d.png" alt="排序测试结果"></p>
+<h2><a id="25__604"></a>2.5 模型优化</h2>
+<p>这里实验示例代码给出了一种dropout方法，来提高模型的泛化性能。<br>
+<strong>DROPOUT：</strong><br>
+Dropout是一种常用的正则化技术，广泛应用于深度学习模型中，特别是多层感知机（MLP）、卷积神经网络（CNN）等，以减少过拟合的风险，提高模型的泛化能力。其基本思想是在神经网络的训练过程中，按照一定的概率临时“丢弃”（设置输出为0）一部分神经元，以此强制网络学习更加鲁棒的特征表示。</p>
+<ul>
+<li>
+<p>Dropout的工作机制：</p>
+<ol>
+<li>
+<p>随机丢弃：在前向传播过程中，对于每个隐藏层，Dropout会按照预先设定的概率（通常称之为丢弃率，如0.5）随机选择一部分神经元，并将其输出置为0。这意味着每次训练样本传递时，网络的结构都会有所不同。</p>
+</li>
+<li>
+<p>比例缩放：在训练时，为了保持网络输出的期望值不变（考虑到部分神经元被“丢弃”），所有剩余神经元的输出会被放大，具体放大比例为1/(1-丢弃率)。</p>
+</li>
+<li>
+<p>测试阶段处理：在模型评估或预测时，通常不直接使用Dropout，而是对所有神经元的输出乘以丢弃率作为近似修正，或者使用训练时的平均效果，这被称为Dropout的“inverted dropout”。</p>
+</li>
+</ol>
+</li>
+<li>
+<p>Dropout的优点：</p>
+<ol>
+<li>减少过拟合：通过随机丢弃部分神经元，Dropout有效地减少了神经元之间复杂的共适应关系，迫使网络学习更加独立且具有代表性的特征。</li>
+<li>模型平均：可以视作在每次迭代时训练了不同的子网络，最后得到的模型可以看作是这些子网络的集成，提高了泛化能力。</li>
+<li>简化网络：Dropout可以看作是对网络结构的一种动态简化，有助于避免局部最优，并且在一定程度上模拟了bagging等集成方法的效果。</li>
+</ol>
+</li>
+</ul>
+<p><strong>注意事项：</strong></p>
+<ol>
+<li>超参数调整：丢弃率是一个重要的超参数，过高会导致模型欠拟合，过低则可能不足以有效防止过拟合。</li>
+<li>实施细节：在某些特定类型的网络或层中（如卷积层或浅层网络），Dropout的使用需谨慎，因为它可能不会像在深层网络中那样有效，甚至可能损害模型性能。<br>
+<img src="https://img-blog.csdnimg.cn/direct/16866ed771c54c7d8045c4772f46d38a.png" alt="对于加与不加dropout方法"><br>
+模型分类器定义方法有所改动：</li>
+</ol>
+<pre><code class="prism language-python"><span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn <span class="token keyword">as</span> nn
+<span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn<span class="token punctuation">.</span>functional <span class="token keyword">as</span> F
+
+<span class="token keyword">class</span> <span class="token class-name">MultilayerPerceptron</span><span class="token punctuation">(</span>nn<span class="token punctuation">.</span>Module<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">,</span> output_dim<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        参数：
+        input_dim (int): 输入向量的大小
+        hidden_dim (int): 第一个线性层（Linear layer）的输出尺寸
+        output_dim (int): 第二个线性层（Linear layer）的输出尺寸
+        """</span>
+        <span class="token builtin">super</span><span class="token punctuation">(</span>MultilayerPerceptron<span class="token punctuation">,</span> self<span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>fc1 <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>fc2 <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>hidden_dim<span class="token punctuation">,</span> output_dim<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> x_in<span class="token punctuation">,</span> apply_softmax<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""多层感知机（MLP，Multilayer Perceptron）的前向传播（forward pass）
+        参数：
+          x_in (torch.Tensor): 输入数据张量。
+          x_in的形状应为（批次大小, 输入维度），即(batch, input_dim)。
+          apply_softmax (bool): 一个标志，指示是否应用softmax激活函数。
+          如果与交叉熵损失函数一起使用，则应设置为False。
+
+        返回：
+         结果张量。该张量的形状应为（批次大小, 输出维度），即(batch, output_dim)。
+        """</span>
+        intermediate <span class="token operator">=</span> F<span class="token punctuation">.</span>relu<span class="token punctuation">(</span>self<span class="token punctuation">.</span>fc1<span class="token punctuation">(</span>x_in<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        output <span class="token operator">=</span> self<span class="token punctuation">.</span>fc2<span class="token punctuation">(</span>F<span class="token punctuation">.</span>dropout<span class="token punctuation">(</span>intermediate<span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token number">0.5</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">if</span> apply_softmax<span class="token punctuation">:</span>
+            output <span class="token operator">=</span> F<span class="token punctuation">.</span>softmax<span class="token punctuation">(</span>output<span class="token punctuation">,</span> dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> output
+</code></pre>
+<p>这里设置dropout比率为0.5，也是大家最常用的比率值。<br>
+使用带有dropout的MLP训练模型，得到测试结果:<br>
+<img src="https://img-blog.csdnimg.cn/direct/e1d7e891169a4164ae80f3d7029664b0.png" alt="带有dropout的MLP模型测试结果"><br>
+测试集的精度确实提高了近5个百分点，确实有助于提升模型泛化性能。</p>
+<h1><a id="_668"></a>三、卷积神经网络实验过程</h1>
+<p>卷积神经网络(CNN)，这是一种非常适合检测空间子结构(并因此创建有意义的空间子结构)的神经网络。CNNs通过使用少量的权重来扫描输入数据张量来实现这一点。通过这种扫描，它们产生表示子结构检测(或不检测)的输出张量。<br>
+<img src="https://img-blog.csdnimg.cn/direct/b4c85a033cc24d7d827511ee66f82511.png" alt="二维卷积计算示例"></p>
+<h2><a id="31_CNN_671"></a>3.1 CNN常见超参数</h2>
+<h3><a id="311_channels_672"></a>3.1.1 通道（channels）</h3>
+<p>非正式地，通道(channel)是指沿输入中的每个点的特征维度。例如，在图像中，对应于RGB组件的图像中的每个像素有三个通道。在使用卷积时，文本数据也可以采用类似的概念。从概念上讲，如果文本文档中的“像素”是单词，那么通道的数量就是词汇表的大小。如果我们更细粒度地考虑字符的卷积，通道的数量就是字符集的大小(在本例中刚好是词汇表)。在PyTorch卷积实现中，输入通道的数量是in_channels参数。<br>
+这里只简单展示了两通道的卷积计算过程：<img src="https://img-blog.csdnimg.cn/direct/f372e9ced7224656b1897d24fdc1353e.png" alt="这里只简单展示了两通道的卷积计算过程"></p>
+<h3><a id="312_kernal_size_676"></a>3.1.2 卷积核大小（kernal_size）</h3>
+<p>滤波器的尺寸（高度和宽度），通常表示为一个正方形，例如3x3或5x5。较大的滤波器可以覆盖更大的输入区域，捕捉更大范围的特征，但计算成本较高；较小的滤波器则更加关注局部特征。但是注意：卷积核的通道数（channels）要跟原始输入的通道数相同，这样才能合理的进行计算。</p>
+<h3><a id="313_stride_678"></a>3.1.3 步长（stride）</h3>
+<p>Stride控制卷积之间的步长。如果步长与核相同，则内核计算不会重叠。另一方面，如果跨度为1，则内核重叠最大。输出张量可以通过增加步幅的方式被有意的压缩来总结信息。总的来说就是卷积核在输入数据上滑动的步长。较大的步长会减少输出特征图的尺寸，减小计算量，但可能会丢失空间信息；较小的步长保留更多细节，但会增加计算成本。</p>
+<h3><a id="314__padding_680"></a>3.1.4  零填充（padding）</h3>
+<p>从前面可以看出卷积计算无疑会缩小特征输出大小，为了抵消这一点，输入数据张量被人为地增加了长度(如果是一维、二维或三维)、高度(如果是二维或三维)和深度(如果是三维)，方法是在每个维度上附加和前置0。这就是零填充。在输入数据边缘添加的额外像素，通常用0填充。这会影响输出特征图的尺寸。使用“SAME”填充时，可以确保输出尺寸与输入尺寸相同，而“VALID”则不填充，允许输出尺寸随卷积操作自然减少。<br>
+零填充的示例：<br>
+<img src="https://img-blog.csdnimg.cn/direct/c2515fa69e2a4b05accb15b07f8c5283.png" alt="零填充示例"><br>
+这些超参数共同决定了卷积层的输出尺寸，可以用以下公式计算：</p>
+<ul>
+<li>
+<p>高 <span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>=</mo><mfrac><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>−</mo><mi>F</mi><mo>+</mo><mn>2</mn><mi>P</mi></mrow><mi>S</mi></mfrac><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">
+H_2 = \frac{H_1 - F + 2P}{S} + 1 
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0813em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 2.0463em; vertical-align: -0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.3603em;"><span class="" style="top: -2.314em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0576em;">S</span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.677em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0813em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right: 0.1389em;">P</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.686em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6444em;"></span><span class="mord">1</span></span></span></span></span></span></p>
+</li>
+<li>
+<p>宽<span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>W</mi><mn>2</mn></msub><mo>=</mo><mfrac><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>−</mo><mi>F</mi><mo>+</mo><mn>2</mn><mi>P</mi></mrow><mi>S</mi></mfrac><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">
+W_2 = \frac{W_1 - F + 2P}{S} + 1 
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.1389em;">W</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.1389em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 2.0463em; vertical-align: -0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.3603em;"><span class="" style="top: -2.314em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.0576em;">S</span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.677em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right: 0.1389em;">W</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.1389em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right: 0.1389em;">P</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.686em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6444em;"></span><span class="mord">1</span></span></span></span></span></span></p>
+</li>
+</ul>
+<p>除了上述核心超参数，还有一些其他重要的超参数和设计决策，包括但不限于：</p>
+<ul>
+<li>池化大小和类型：如最大池化、平均池化等，及其池化窗口大小，用于下采样和特征选择。</li>
+<li>学习率：决定梯度下降时参数更新的幅度，对模型收敛速度和最终性能有重大影响。</li>
+<li>批量大小（Batch Size）：每次迭代时处理的数据样本数量，影响学习过程的稳定性和效率。</li>
+<li>激活函数：如ReLU、sigmoid、tanh等，影响网络的非线性表达能力。</li>
+<li>优化器：如Adam、SGD、RMSprop等，决定了参数更新的规则。</li>
+<li>正则化：如L1、L2正则化或Dropout，用于防止过拟合。</li>
+<li>迭代轮数（Epochs）：模型遍历完整训练数据集的次数，决定了模型学习的深度。</li>
+</ul>
+<p>选择和调整这些超参数是一个迭代和实验驱动的过程，通常需要结合交叉验证和性能评估来找到最佳配置。</p>
+<p>为了证明CNN的有效性，让我们应用一个简单的CNN模型来分类姓氏。这项任务的许多细节与前面的MLP示例相同，但真正发生变化的是模型的构造和向量化过程。模型的输入，而不是我们在上一个例子中看到的收缩的onehot，将是一个onehot的矩阵。这种设计将使CNN能够更好地“view”字符的排列，并对在“示例:带有多层感知器的姓氏分类”中使用的收缩的onehot编码中丢失的序列信息进行编码。</p>
+<h2><a id="32__706"></a>3.2 数据预处理</h2>
+<p>这里的数据处理跟上面的前馈神经网络有些许不同之处：数据集由onehot向量矩阵组成，而不是一个收缩的onehot向量。为此，我们实现了一个数据集类，它跟踪最长的姓氏，并将其作为矩阵中包含的行数提供给矢量化器。列的数量是onehot向量的大小(词汇表的大小)。</p>
+<pre><code class="prism language-python"><span class="token keyword">class</span> <span class="token class-name">SurnameDataset</span><span class="token punctuation">(</span>Dataset<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname_df<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        参数:
+            name_df (pandas.DataFrame): 数据集，包含用于模型训练、验证和测试的数据。
+            vectorizer (SurnameVectorizer): 依据数据集初始化的姓氏向量化器，用于将文本数据转换成模型可理解的数值形式。
+        """</span>
+        self<span class="token punctuation">.</span>surname_df <span class="token operator">=</span> surname_df
+        self<span class="token punctuation">.</span>_vectorizer <span class="token operator">=</span> vectorizer
+        self<span class="token punctuation">.</span>train_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split<span class="token operator">==</span><span class="token string">'train'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>train_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>train_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>val_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split<span class="token operator">==</span><span class="token string">'val'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>validation_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>val_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>test_df <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_df<span class="token punctuation">[</span>self<span class="token punctuation">.</span>surname_df<span class="token punctuation">.</span>split<span class="token operator">==</span><span class="token string">'test'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>test_size <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>test_df<span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>_lookup_dict <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">'train'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>train_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>train_size<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                             <span class="token string">'val'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>val_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>validation_size<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                             <span class="token string">'test'</span><span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>test_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>test_size<span class="token punctuation">)</span><span class="token punctuation">}</span>
+
+        self<span class="token punctuation">.</span>set_split<span class="token punctuation">(</span><span class="token string">'train'</span><span class="token punctuation">)</span>
+        
+        <span class="token comment"># Class weights</span>
+        class_counts <span class="token operator">=</span> surname_df<span class="token punctuation">.</span>nationality<span class="token punctuation">.</span>value_counts<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>to_dict<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">def</span> <span class="token function">sort_key</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">return</span> self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>item<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        sorted_counts <span class="token operator">=</span> <span class="token builtin">sorted</span><span class="token punctuation">(</span>class_counts<span class="token punctuation">.</span>items<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> key<span class="token operator">=</span>sort_key<span class="token punctuation">)</span>
+        frequencies <span class="token operator">=</span> <span class="token punctuation">[</span>count <span class="token keyword">for</span> _<span class="token punctuation">,</span> count <span class="token keyword">in</span> sorted_counts<span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>class_weights <span class="token operator">=</span> <span class="token number">1.0</span> <span class="token operator">/</span> torch<span class="token punctuation">.</span>tensor<span class="token punctuation">(</span>frequencies<span class="token punctuation">,</span> dtype<span class="token operator">=</span>torch<span class="token punctuation">.</span>float32<span class="token punctuation">)</span>
+
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_dataset_and_make_vectorizer</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_csv<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""加载数据集并从零开始创建一个新的向量化器。
+        
+       参数:
+            surname_csv (str): 数据集的位置（文件路径）。
+       返回:
+            返回一个`SurnameDataset`实例，该实例包含了加载的数据集以及根据训练数据新建的向量化器。
+        """</span>
+        surname_df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span>surname_csv<span class="token punctuation">)</span>
+        train_surname_df <span class="token operator">=</span> surname_df<span class="token punctuation">[</span>surname_df<span class="token punctuation">.</span>split<span class="token operator">==</span><span class="token string">'train'</span><span class="token punctuation">]</span>
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_df<span class="token punctuation">,</span> SurnameVectorizer<span class="token punctuation">.</span>from_dataframe<span class="token punctuation">(</span>train_surname_df<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_dataset_and_load_vectorizer</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_csv<span class="token punctuation">,</span> vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""加载数据集及对应的向量化器。
+        适用于向量化器已缓存以供重用的情况。
+        
+       参数:
+            surname_csv (str): 数据集的存储位置。
+            vectorizer_filepath (str): 已保存向量化器的文件位置。
+       返回:
+            返回一个`SurnameDataset`实例，该实例包含了加载的数据集及从指定路径加载的向量化器。
+        """</span>
+        surname_df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span>surname_csv<span class="token punctuation">)</span>
+        vectorizer <span class="token operator">=</span> cls<span class="token punctuation">.</span>load_vectorizer_only<span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_df<span class="token punctuation">,</span> vectorizer<span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@staticmethod</span>
+    <span class="token keyword">def</span> <span class="token function">load_vectorizer_only</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""一个静态方法，用于从文件中加载向量化器。
+        
+       参数:
+            vectorizer_filepath (str): 序列化向量化器的存储位置。
+       返回:
+            返回向量化器的实例，该实例是从指定路径加载得到的。
+        """</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            <span class="token keyword">return</span> SurnameVectorizer<span class="token punctuation">.</span>from_serializable<span class="token punctuation">(</span>json<span class="token punctuation">.</span>load<span class="token punctuation">(</span>fp<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">save_vectorizer</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> vectorizer_filepath<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""使用json格式将向量化器保存到磁盘上。
+        
+        Args:
+            vectorizer_filepath (str): 向量化器保存的目标位置。
+        """</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>vectorizer_filepath<span class="token punctuation">,</span> <span class="token string">"w"</span><span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            json<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>to_serializable<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> fp<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">get_vectorizer</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">""" returns the vectorizer """</span>
+        <span class="token keyword">return</span> self<span class="token punctuation">.</span>_vectorizer
+
+    <span class="token keyword">def</span> <span class="token function">set_split</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> split<span class="token operator">=</span><span class="token string">"train"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">""" 根据数据框中的某一列选择数据集中的分割部分（如训练集、验证集或测试集）。 """</span>
+        self<span class="token punctuation">.</span>_target_split <span class="token operator">=</span> split
+        self<span class="token punctuation">.</span>_target_df<span class="token punctuation">,</span> self<span class="token punctuation">.</span>_target_size <span class="token operator">=</span> self<span class="token punctuation">.</span>_lookup_dict<span class="token punctuation">[</span>split<span class="token punctuation">]</span>
+
+    <span class="token keyword">def</span> <span class="token function">__len__</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> self<span class="token punctuation">.</span>_target_size
+
+    <span class="token keyword">def</span> <span class="token function">__getitem__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> index<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""PyTorch数据集中主要的入口点方法，用于获取数据集中特定索引的数据样本及其标签。
+        
+        参数:
+            index (int): 数据点在数据集中的索引位置。
+        返回:
+            一个字典，包含数据点的特征（x_data）和标签（y_target）。
+        """</span>
+        row <span class="token operator">=</span> self<span class="token punctuation">.</span>_target_df<span class="token punctuation">.</span>iloc<span class="token punctuation">[</span>index<span class="token punctuation">]</span>
+
+        surname_matrix <span class="token operator">=</span> \
+            self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>vectorize<span class="token punctuation">(</span>row<span class="token punctuation">.</span>surname<span class="token punctuation">)</span>
+
+        nationality_index <span class="token operator">=</span> \
+            self<span class="token punctuation">.</span>_vectorizer<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>row<span class="token punctuation">.</span>nationality<span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> <span class="token punctuation">{</span><span class="token string">'x_surname'</span><span class="token punctuation">:</span> surname_matrix<span class="token punctuation">,</span>
+                <span class="token string">'y_nationality'</span><span class="token punctuation">:</span> nationality_index<span class="token punctuation">}</span>
+
+    <span class="token keyword">def</span> <span class="token function">get_num_batches</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> batch_size<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""给定批次大小，返回数据集中批次的总数。
+        
+        参数:
+            batch_size (int): 每个批次的大小。
+        返回:
+            数据集中的总批次数量。
+        """</span>
+        <span class="token keyword">return</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span> <span class="token operator">//</span> batch_size
+
+    
+<span class="token keyword">def</span> <span class="token function">generate_batches</span><span class="token punctuation">(</span>dataset<span class="token punctuation">,</span> batch_size<span class="token punctuation">,</span> shuffle<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+                     drop_last<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> device<span class="token operator">=</span><span class="token string">"cpu"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    一个生成器函数，用于封装PyTorch的DataLoader。
+    它确保了每个张量都位于正确的设备位置上。
+    """</span>
+    dataloader <span class="token operator">=</span> DataLoader<span class="token punctuation">(</span>dataset<span class="token operator">=</span>dataset<span class="token punctuation">,</span> batch_size<span class="token operator">=</span>batch_size<span class="token punctuation">,</span>
+                            shuffle<span class="token operator">=</span>shuffle<span class="token punctuation">,</span> drop_last<span class="token operator">=</span>drop_last<span class="token punctuation">)</span>
+
+    <span class="token keyword">for</span> data_dict <span class="token keyword">in</span> dataloader<span class="token punctuation">:</span>
+        out_data_dict <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+        <span class="token keyword">for</span> name<span class="token punctuation">,</span> tensor <span class="token keyword">in</span> data_dict<span class="token punctuation">.</span>items<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            out_data_dict<span class="token punctuation">[</span>name<span class="token punctuation">]</span> <span class="token operator">=</span> data_dict<span class="token punctuation">[</span>name<span class="token punctuation">]</span><span class="token punctuation">.</span>to<span class="token punctuation">(</span>device<span class="token punctuation">)</span>
+        <span class="token keyword">yield</span> out_data_dict
+</code></pre>
+<p>Dataloader与词汇表的实现与上面的前馈神经网络基本相同，但是Vectorizer的vectorize()方法已经更改，以适应CNN模型的需要。具体来说，正如我们在代码中所示，该函数将字符串中的每个字符映射到一个整数，然后使用该整数构造一个由onehot向量组成的矩阵。重要的是，矩阵中的每一列都是不同的onehot向量。主要原因是，我们将使用的Conv1d层要求数据张量在第0维上具有批处理，在第1维上具有通道，在第2维上具有特性。</p>
+<pre><code class="prism language-python"><span class="token keyword">class</span> <span class="token class-name">SurnameVectorizer</span><span class="token punctuation">(</span><span class="token builtin">object</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""矢量器(Vectorizer)，它协调词汇表(Vocabularies)并将其投入实用。"""</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname_vocab<span class="token punctuation">,</span> nationality_vocab<span class="token punctuation">,</span> max_surname_length<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        参数:
+            surname_vocab (Vocabulary): 将字符映射为整数的词汇表。
+            nationality_vocab (Vocabulary): 将国籍映射为整数的词汇表。
+            max_surname_length (int): 最长姓氏的长度。
+        """</span>
+        self<span class="token punctuation">.</span>surname_vocab <span class="token operator">=</span> surname_vocab
+        self<span class="token punctuation">.</span>nationality_vocab <span class="token operator">=</span> nationality_vocab
+        self<span class="token punctuation">.</span>_max_surname_length <span class="token operator">=</span> max_surname_length
+
+    <span class="token keyword">def</span> <span class="token function">vectorize</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> surname<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+        参数:
+            surname (str): 姓氏字符串。
+        返回:
+            one_hot_matrix (np.ndarray): 一个由独热向量组成矩阵，用于表示姓氏中的每个字符。
+        """</span>
+
+        one_hot_matrix_size <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>surname_vocab<span class="token punctuation">)</span><span class="token punctuation">,</span> self<span class="token punctuation">.</span>_max_surname_length<span class="token punctuation">)</span>
+        one_hot_matrix <span class="token operator">=</span> np<span class="token punctuation">.</span>zeros<span class="token punctuation">(</span>one_hot_matrix_size<span class="token punctuation">,</span> dtype<span class="token operator">=</span>np<span class="token punctuation">.</span>float32<span class="token punctuation">)</span>
+                               
+        <span class="token keyword">for</span> position_index<span class="token punctuation">,</span> character <span class="token keyword">in</span> <span class="token builtin">enumerate</span><span class="token punctuation">(</span>surname<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            character_index <span class="token operator">=</span> self<span class="token punctuation">.</span>surname_vocab<span class="token punctuation">.</span>lookup_token<span class="token punctuation">(</span>character<span class="token punctuation">)</span>
+            one_hot_matrix<span class="token punctuation">[</span>character_index<span class="token punctuation">]</span><span class="token punctuation">[</span>position_index<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">1</span>
+        
+        <span class="token keyword">return</span> one_hot_matrix
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">from_dataframe</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> surname_df<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""根据数据集DataFrame实例化矢量器(Vectorizer)。
+        参数:
+            surname_df (pandas.DataFrame): 姓氏数据集。
+        返回:
+            SurnameVectorizer的一个实例，根据提供的数据集初始化。
+        """</span>
+        surname_vocab <span class="token operator">=</span> Vocabulary<span class="token punctuation">(</span>unk_token<span class="token operator">=</span><span class="token string">"@"</span><span class="token punctuation">)</span>
+        nationality_vocab <span class="token operator">=</span> Vocabulary<span class="token punctuation">(</span>add_unk<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+        max_surname_length <span class="token operator">=</span> <span class="token number">0</span>
+
+        <span class="token keyword">for</span> index<span class="token punctuation">,</span> row <span class="token keyword">in</span> surname_df<span class="token punctuation">.</span>iterrows<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            max_surname_length <span class="token operator">=</span> <span class="token builtin">max</span><span class="token punctuation">(</span>max_surname_length<span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>row<span class="token punctuation">.</span>surname<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">for</span> letter <span class="token keyword">in</span> row<span class="token punctuation">.</span>surname<span class="token punctuation">:</span>
+                surname_vocab<span class="token punctuation">.</span>add_token<span class="token punctuation">(</span>letter<span class="token punctuation">)</span>
+            nationality_vocab<span class="token punctuation">.</span>add_token<span class="token punctuation">(</span>row<span class="token punctuation">.</span>nationality<span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_vocab<span class="token punctuation">,</span> nationality_vocab<span class="token punctuation">,</span> max_surname_length<span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@classmethod</span>
+    <span class="token keyword">def</span> <span class="token function">from_serializable</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> contents<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        surname_vocab <span class="token operator">=</span> Vocabulary<span class="token punctuation">.</span>from_serializable<span class="token punctuation">(</span>contents<span class="token punctuation">[</span><span class="token string">'surname_vocab'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        nationality_vocab <span class="token operator">=</span>  Vocabulary<span class="token punctuation">.</span>from_serializable<span class="token punctuation">(</span>contents<span class="token punctuation">[</span><span class="token string">'nationality_vocab'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> cls<span class="token punctuation">(</span>surname_vocab<span class="token operator">=</span>surname_vocab<span class="token punctuation">,</span> nationality_vocab<span class="token operator">=</span>nationality_vocab<span class="token punctuation">,</span> 
+                   max_surname_length<span class="token operator">=</span>contents<span class="token punctuation">[</span><span class="token string">'max_surname_length'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">to_serializable</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token punctuation">{</span><span class="token string">'surname_vocab'</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>surname_vocab<span class="token punctuation">.</span>to_serializable<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                <span class="token string">'nationality_vocab'</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>nationality_vocab<span class="token punctuation">.</span>to_serializable<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> 
+                <span class="token string">'max_surname_length'</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>_max_surname_length<span class="token punctuation">}</span>
+</code></pre>
+<h2><a id="33_CNN_915"></a>3.3 CNN模型构建</h2>
+<p>本实验是使用sequence和ELU PyTorch模块。序列模块是封装线性操作序列的方便包装器。在这种情况下，我们使用它来封装Conv1d序列的应用程序。ELU是类似于实验3中介绍的ReLU的非线性函数，但是它不是将值裁剪到0以下，而是对它们求幂。ELU已经被证明是卷积层之间使用的一种很有前途的非线性函数。</p>
+<pre><code class="prism language-python"><span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn <span class="token keyword">as</span> nn
+<span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn<span class="token punctuation">.</span>functional <span class="token keyword">as</span> F
+
+<span class="token keyword">class</span> <span class="token class-name">SurnameClassifier</span><span class="token punctuation">(</span>nn<span class="token punctuation">.</span>Module<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> initial_num_channels<span class="token punctuation">,</span> num_classes<span class="token punctuation">,</span> num_channels<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""
+       参数:
+            initial_num_channels (int): 输入特征向量的尺寸。
+            num_classes (int): 输出预测向量的尺寸，即分类的数目。
+            num_channels (int): 网络中各层使用的固定通道数。
+        """</span>
+        <span class="token builtin">super</span><span class="token punctuation">(</span>SurnameClassifier<span class="token punctuation">,</span> self<span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+        self<span class="token punctuation">.</span>convnet <span class="token operator">=</span> nn<span class="token punctuation">.</span>Sequential<span class="token punctuation">(</span>
+            nn<span class="token punctuation">.</span>Conv1d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span>initial_num_channels<span class="token punctuation">,</span>
+                      out_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span> kernel_size<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>ELU<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>Conv1d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span> out_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span>
+                      kernel_size<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>ELU<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>Conv1d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span> out_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span>
+                      kernel_size<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>ELU<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>Conv1d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span> out_channels<span class="token operator">=</span>num_channels<span class="token punctuation">,</span>
+                      kernel_size<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            nn<span class="token punctuation">.</span>ELU<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>fc <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>num_channels<span class="token punctuation">,</span> num_classes<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> x_surname<span class="token punctuation">,</span> apply_softmax<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""分类器的前向传播过程
+
+        参数:
+            x_surname (torch.Tensor): 输入数据张量。
+                x_surname的形状应为(batch, initial_num_channels, max_surname_length)
+            apply_softmax (bool): 应用softmax激活函数的标志。
+                如果与交叉熵损失函数一起使用，则应设为false。
+        返回:
+            输出张量。其形状应为(batch, num_classes)
+        """</span>
+        features <span class="token operator">=</span> self<span class="token punctuation">.</span>convnet<span class="token punctuation">(</span>x_surname<span class="token punctuation">)</span><span class="token punctuation">.</span>squeeze<span class="token punctuation">(</span>dim<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span>
+        prediction_vector <span class="token operator">=</span> self<span class="token punctuation">.</span>fc<span class="token punctuation">(</span>features<span class="token punctuation">)</span>
+
+        <span class="token keyword">if</span> apply_softmax<span class="token punctuation">:</span>
+            prediction_vector <span class="token operator">=</span> F<span class="token punctuation">.</span>softmax<span class="token punctuation">(</span>prediction_vector<span class="token punctuation">,</span> dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+
+        <span class="token keyword">return</span> prediction_vector
+</code></pre>
+<h2><a id="34_CNN_968"></a>3.4 CNN迭代训练及结果测试</h2>
+<p>这里训练数据集路径的设置，训练过程的设计，以及最后测试结果的代码与前面不尽相同，不再赘述，稍加改动即可。<br>
+这里展示测试结果：<br>
+为了更好的跟前馈神经网络对比，这里同样设置了epoch为20，虽然模型性能不佳，但减少了训练时间。<br>
+<img src="https://img-blog.csdnimg.cn/direct/3d03310a13e54a64a15d08620fcd7221.png" alt="在这里插入图片描述"><br>
+可见结果确实比上面的前馈神经网络要好。</p>
+<h2><a id="35_CNN_974"></a>3.5 CNN常见操作解析</h2>
+<h3><a id="351_Pooling_Operation_975"></a>3.5.1 池化操作（Pooling Operation）</h3>
+<p>Pooling是将高维特征映射总结为低维特征映射的操作。feature map中的值总结了输入的一些区域。由于卷积计算的重叠性，许多计算出的特征可能是冗余的。Pooling是一种将高维(可能是冗余的)特征映射总结为低维特征映射的方法。在形式上，池是一种像sum、mean或max这样的算术运算符，系统地应用于feature map中的局部区域，得到的池操作分别称为sum pooling、average pooling和max pooling。但是这种处理却不会引入参数，不会增加模型复杂度，就很合适。示例如下:<br>
+<img src="https://img-blog.csdnimg.cn/direct/81f37c3d9d4042228913b865e6fe19d3.png" alt="在这里插入图片描述"></p>
+<h3><a id="352_Batch_Normalization_979"></a>3.5.2 批处理标准化（Batch Normalization）</h3>
+<p>随着网络的深度增加，每层特征值分布会逐渐的向激活函数的输出区间的上下两端（激活函数饱和区间）靠近，这样继续下去就会导致梯度消失。BN就是通过方法将该层特征值分布重新拉回标准正态分布，特征值将落在激活函数对于输入较为敏感的区间，输入的小变化可导致损失函数较大的变化，使得梯度变大，避免梯度消失，同时也可加快收敛。<br>
+　<em><strong>BN的基本思想其实相当直观</strong></em>：因为深层神经网络在做非线性变换前的激活输入值（就是那个x=WU+B，U是输入）随着网络深度加深或者在训练过程中，其分布逐渐发生偏移或者变动，之所以训练收敛慢，一般是整体分布逐渐往非线性函数的取值区间的上下限两端靠近（对于Sigmoid函数来说，意味着激活输入值WU+B是大的负值或正值），所以这导致反向传播时低层神经网络的梯度消失，这是训练深层神经网络收敛越来越慢的本质原因，而BN就是通过一定的规范化手段，把每层神经网络任意神经元这个输入值的分布强行拉回到均值为0方差为1的标准正态分布，其实就是把越来越偏的分布强制拉回比较标准的分布，这样使得激活输入值落在非线性函数对输入比较敏感的区域，这样输入的小变化就会导致损失函数较大的变化，意思是这样让梯度变大，避免梯度消失问题产生，而且梯度变大意味着学习收敛速度快，能大大加快训练速度。</p>
+<blockquote>
+<p><strong>其实一句话就是</strong>：对于每个隐层神经元，把逐渐向非线性函数映射后向取值区间极限饱和区靠拢的输入分布强制拉回到均值为0方差为1的比较标准的正态分布，使得非线性变换函数的输入值落入对输入比较敏感的区域，以此避免梯度消失问题。</p>
+<blockquote>
+<p>因为梯度一直都能保持比较大的状态，所以很明显对神经网络的参数调整效率比较高，就是变动大，就是说向损失函数最优值迈动的步子大，也就是说收敛地快。BN说到底就是这么个机制，方法很简单，道理很深刻。</p>
+</blockquote>
+</blockquote>
+<p>BatchNorm为什么NB呢，关键还是效果好。①不仅仅极大提升了训练速度，收敛过程大大加快；②还能增加分类效果，一种解释是这是类似于Dropout的一种防止过拟合的正则化表达方式，所以不用Dropout也能达到相当的效果；③另外调参过程也简单多了，对于初始化要求没那么高，而且可以使用大的学习率等。总而言之，经过这么简单的变换，带来的好处多得很，这也是为何现在BN这么快流行起来的原因。<br>
+了解BN详细操作流程，见链接：<br>
+<a href="https://www.cnblogs.com/guoyaohua/p/8724433.html">深入理解BN的操作流程</a></p>
+<h3><a id="353_NetworkinNetwork_Connections_1x1__988"></a>3.5.3 Network-in-Network Connections (1x1 卷积)</h3>
+<p>卷积神经网络中的1*1卷积操作虽然称为“卷积”，但实际上更接近于一个逐点操作，因为它不涉及相邻像素的组合，而是对每个输入通道上的每个元素应用一个标量权重，随后可选地加上一个偏置项。具体操作步骤如下：</p>
+<ol>
+<li>
+<p>权重定义：对于一个11卷积层，首先定义一组卷积核（或称滤波器、过滤器），每个滤波器的尺寸为11，但其深度等于输入特征图的通道数。例如，如果输入特征图有64个通道，那么可能定义有32个这样的1*1卷积核，每个卷积核都有64个权重参数（对应于输入的每一个通道），以及一个可选的偏置项。</p>
+</li>
+<li>
+<p>逐点乘加操作：</p>
+<ul>
+<li>对于输入特征图的每一个位置，1*1卷积核中的每个权重会与输入的相应通道上的像素值相乘。</li>
+<li>所有通道上的乘积结果相加（如果有偏置，则加上偏置项），得到该位置的一个新值。</li>
+<li>这个过程在输入特征图的所有位置上重复，生成一个新的特征图。</li>
+</ul>
+</li>
+<li>
+<p>通道整合与变化：</p>
+<ul>
+<li>由于1*1卷积可以在不改变输入特征图的空间维度的前提下改变通道数，因此它经常被用来减少（降维）或增加（升维）特征图的深度。</li>
+<li>如果定义了32个1*1卷积核作用于64通道的输入，输出就会变成32通道的特征图，实现了特征的降维；反之，如果定义了128个卷积核，输出则变成128通道，实现了特征的升维。</li>
+</ul>
+</li>
+<li>
+<p>作用与优势：</p>
+<ul>
+<li>降维：减少计算量和参数数量，降低过拟合风险。</li>
+<li>升维：增加模型的表达能力，引入更多非线性。</li>
+<li>特征重权重：每个输入通道的信息通过学习到的权重进行重新加权，实现特征选择。</li>
+<li>线性变换：相当于对输入特征进行线性映射，简化了网络计算。</li>
+<li>加速信息流动：在某些网络架构中，如Inception和ResNeXt，1*1卷积用于快速整合跨组的信息。</li>
+<li></li>
+</ul>
+</li>
+</ol>
+<p>综上所述，1*1卷积虽然简单，但在现代CNN架构中扮演着重要角色，特别是在特征维度调整、计算效率提升和模型性能增强方面。<br>
+效果：<br>
+<img src="https://img-blog.csdnimg.cn/direct/27a7a4a887514427b22be47f8e9539ac.png" alt="1*1卷积效果"></p>
+<h3><a id="354_Residual_ConnectionsResidual_Block_1013"></a>3.5.4 残差连接/残差块（Residual Connections/Residual Block）</h3>
+<p>卷积神经网络中的残差连接（Residual Connection 或 Skip Connection）是一种设计模式，最早在ResNet（残差网络）中被广泛采用，目的是为了解决深层神经网络训练中的梯度消失和梯度爆炸问题，同时促进更深层次网络的有效训练。</p>
+<h4><a id="_1016"></a>基本概念</h4>
+<p>残差连接的核心思想是为网络提供一个“捷径”，让输入可以直接跳过一个或多个层，直接与这些层的输出相加，形成最终的输出。数学上，假设原始输入为 :<span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">
+ x
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span></span></span>经过几层网络变换后的输出为 :<span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>那么残差连接后的输出可以表示为<br>
+<span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>+</mo><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x+F(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 0.6667em; vertical-align: -0.0833em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span>这里的 <span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span> 实际上是残差，即需要网络学习的相对于输入的增量变化。</p>
+<h4><a id="_1024"></a>作用与优势</h4>
+<ul>
+<li>
+<p>缓解梯度消失问题：通过直接连通输入和较深层输出，残差连接为梯度提供了直接的回传路径，避免了深层网络中梯度在连续传递过程中的严重衰减。</p>
+</li>
+<li>
+<p>易于优化：网络不再需要从头学习复杂的映射<span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo stretchy="false">(</mo><mi>x</mi><mtext>到</mtext><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mtext>，</mtext></mrow><annotation encoding="application/x-tex">(x到F(x))，</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mord cjk_fallback">到</span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span><span class="mord cjk_fallback">，</span></span></span></span></span></span>而是只需关注学习残差 <span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>H</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><mi>x</mi><mtext>，</mtext></mrow><annotation encoding="application/x-tex">F(x)=H(x)−x，</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6833em;"></span><span class="mord mathnormal">x</span><span class="mord cjk_fallback">，</span></span></span></span></span></span>其中 <span class="katex--inline"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">H(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span> 是没有残差连接时的期望输出。这种形式通常更容易优化。</p>
+</li>
+<li>
+<p>加速收敛：残差连接使得网络能够更容易地逼近恒等映射，从而加速训练过程并有可能达到更好的性能。</p>
+</li>
+<li>
+<p>促进深度增加：残差网络的成功使得研究人员能够构建出超过百层的深度网络，而不会遇到传统网络那样的训练难题，提升了网络的表达能力。</p>
+</li>
+</ul>
+<h4><a id="_1033"></a>残差块结构</h4>
+<p>残差块是包含残差连接的基本构建单元，典型的结构包括：</p>
+<ul>
+<li>两个或三个卷积层，每个卷积层之后可能伴有批量归一化（Batch Normalization）和激活函数（如ReLU）。</li>
+<li>第一个卷积层可能用于调整通道数，以匹配残差连接的维度。</li>
+<li>如果需要改变维度，会在输入信号上应用一个1*1卷积来调整其通道数，以确保与残差连接的相加操作可行。</li>
+<li>最后，将这些卷积层的输出与经过相同调整的输入相加，形成残差块的输出。</li>
+</ul>
+<p>通过这些设计，残差网络不仅解决了深层网络的训练难题，还显著提升了网络的性能和实用性，成为深度学习领域的一项基础且重要的技术。</p>
+<p><img src="https://img-blog.csdnimg.cn/direct/324ed4501f944afb839b6f01f73a04fa.png" alt="残差连接"></p>
+<h1><a id="_1045"></a>四、实验总结与思考</h1>
+<h2><a id="41__1047"></a>4.1 模型设计方面</h2>
+<ul>
+<li>前馈神经网络：设计了多层全连接结构，每层后接激活函数（如ReLU）。输入层维度依据文本编码方式确定，输出层一般为softmax函数，用于多分类问题。</li>
+<li>卷积神经网络：利用卷积层捕捉局部特征，池化层进行特征降维，加入全连接层进行分类。对于文本数据，可以采用1D卷积，对字符或词嵌入序列进行操作。</li>
+</ul>
+<h2><a id="42__1050"></a>4.2 模型选择</h2>
+<ul>
+<li>特征提取能力：CNN在处理序列数据（如文本）时，能自动学习到局部特征，尤其在存在局部依赖关系时表现出色，而FNN在无特征工程的情况下可能需要更多层才能捕捉到这些特征。</li>
+<li>模型复杂度与资源消耗：CNN通常比同等规模的FNN拥有更高的模型复杂度和计算需求，尤其是在处理长序列数据时。</li>
+</ul>
+<h2><a id="43__1054"></a>4.3 实践经验</h2>
+<ul>
+<li>文本预处理的重要性：有效的文本预处理（如去除噪声、标准化、分词等）对模型性能有显著影响。</li>
+<li>深度学习模型的可解释性：尽管CNN和FNN在分类任务中表现良好，但理解模型如何做出决策仍然是一个挑战，探索可视化工具和解释性技术是未来研究的方向。</li>
+</ul>
+<h2><a id="44__1057"></a>4.4 未来优化方向</h2>
+<ul>
+<li>融合模型：结合FNN和CNN的优点，如使用CNN提取特征后接入FNN进行分类，或在文本分类任务中探索循环神经网络（RNN）、长短时记忆网络（LSTM）等模型。</li>
+<li>迁移学习：利用预训练的词嵌入或模型参数作为初始权重，可以加速训练过程并可能提高模型性能。</li>
+<li>自注意力机制：在CNN或FNN中融入自注意力机制，增强模型对输入序列中重要部分的关注，提高分类精度。</li>
+</ul>
+<p>以上就是我的全部实验报告。感谢您的阅读。</p>
+</div>
+</body>
+
+</html>
